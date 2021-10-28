@@ -1,7 +1,7 @@
-from ravml.linear.linear_regression import LinearRegression
+from ravml.linear import LinearRegression
 import numpy as np
 import pathlib
-
+#from sklearn.linear_model import LinearRegression
 
 def preprocess(data):
     x = data[:,0]
@@ -18,11 +18,10 @@ data = np.loadtxt('data_linreg.txt', delimiter=',')
 
 x,y,theta = preprocess(data)
 
-model = LinearRegression(x,y,theta)
-model.compute_cost()            # initial cost with coefficients at zero
-optimal_theta, inter, slope = model.gradient_descent(alpha, iterations)
-print(optimal_theta, inter, slope)
-res_file_path = str(pathlib.Path().resolve()) + '/result.png'
-print(res_file_path)
-model.plot_graph(optimal_theta, res_file_path)
+model = LinearRegression()
+model.fit(x,y,theta, iterations)            # initial cost with coefficients at zero
+print(model.theta, model.op_theta[0], model.op_theta[1])
+#ypred=model.predict(x)
+#print(ypred)
+model.plot_graph(model.theta, 'result.png')
 

@@ -1,9 +1,13 @@
 import ravop.core as R
 import numpy as np
 import matplotlib.pyplot as plt
+from ravml.metrics import accuracy
+from ravml.activations import sigmoid
+from ravml.losses import softmax
+import sys
 
 class LogisticRegression():
-    def __init__(self,lr=0.01, num_iter=10, fit_intercept=True, verbose=True):
+    def __init__(self,lr=0.01, num_iter=40, fit_intercept=True, verbose=True):
         self.lr = R.Scalar(lr)
         self.num_iter = num_iter
         self.fit_intercept = fit_intercept
@@ -14,12 +18,15 @@ class LogisticRegression():
 
     def __add_intercept(self, X):
         self.x_shape1 = X.shape[1]+1
-        intercept = np.ones((X.shape[0], 1))
+        intercept = np.zeros((len(X), 1))
         temp = np.concatenate((intercept, X), axis=1)
         return R.Tensor(temp)
 
     def __sigmoid(self, z):
-        return (R.Scalar(1).div(R.Scalar(1).add(R.exp(z.multiply(R.Scalar(-1))))))
+        return R.Scalar(1).div(
+                                R.Scalar(1).add(
+                                                R.exp(z.multiply(R.Scalar(-1)))
+                                ))
 
     def __loss(self, h, y):
         c1 = R.Scalar(-1).multiply(y.multiply(h.natlog()))
@@ -28,16 +35,20 @@ class LogisticRegression():
         c4 = c3.sum().div(R.Scalar(self.leny))
         return c4
 
-    def fit(self, X, y):
+    def fit(self, X, y,sample_weight=None):
         if self.fit_intercept:
             X = self.__add_intercept(X)
-        self.leny = len(y)
-        Y = R.Tensor(y)
-        # weights initialization
-        self.theta = R.Tensor([0]*self.x_shape1)
+        if isinstance(y,R.Tensor) is False:
+            Y=R.Tensor(y)
+        if isinstance(X,R.Tensor) is False:
+            X=R.Tensor(X)
 
+        self.leny = len(y)
+        # weights initialization
+        self.theta = R.Tensor([0]*X.shape[1])
+        print(self.theta)
         for i in range(self.num_iter):
-            h = self.__sigmoid(X.dot(self.theta))
+            h = sigmoid(X.dot(self.theta))
             while h.status != 'computed':
                 pass
             w = X.transpose()
@@ -46,17 +57,21 @@ class LogisticRegression():
             self.theta = self.theta.sub(self.lr.multiply((w.dot(h.sub(Y)).div(R.Scalar(self.leny)))))
             while self.theta.status!='computed':
                 pass
-            loss = self.__loss(self.__sigmoid(X.dot(self.theta)), Y)
+            loss = self.__loss(sigmoid(X.dot(self.theta)), Y)
             while loss.status!='computed':
                 pass
+            print(loss)
             if (self.verbose == True):
                 self.losses.append(loss)
             print('Iteration : ',i)
+            print(self.theta)
 
     def predict_prob(self, X):
+        if isinstance(X,R.Tensor) is False:
+            X=R.Tensor(X)
         if self.fit_intercept:
             X = self.__add_intercept(X)
-        return self.__sigmoid(X.dot(self.theta))
+        return sigmoid(X.dot(self.theta))
 
     def predict(self, X):
         p = self.predict_prob(X)
@@ -94,3 +109,15 @@ class LogisticRegression():
         self.probs = self.probs.reshape(xx1.shape)
         plt.contour(xx1, xx2, self.probs, [0.5], linewidths=1, colors='black')
         plt.show()
+
+    def accuracy(self,y_true,y_pred):
+        if isinstance(y_true,R.Tensor):
+            y_true=R.Tensor(y_true)
+        return accuracy(y_true,y_pred)
+
+
+
+
+
+
+
